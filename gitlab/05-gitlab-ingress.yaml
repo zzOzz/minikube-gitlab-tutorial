@@ -1,0 +1,29 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: gitlab
+  namespace: gitlab
+  annotations:
+    ingress.kubernetes.io/body-size: 200m
+    ingress.kubernetes.io/affinity: "true"
+    ingress.kubernetes.io/session-cookie-name: "fuckoff"
+  #   ingress.kubernetes.io/upstream-fail-timeout: "30"
+  #   ingress.kubernetes.io/secure-backends: "true"
+spec:
+  # tls:
+  # - hosts:
+  #   - ksup.universite-lyon.fr
+  #   secretName: udl-wildcard
+  rules:
+  - host: gitlab.local
+    http:
+      paths:
+      - backend:
+          serviceName: gitlab
+          servicePort: 80
+  - host: gitlab
+    http:
+      paths:
+      - backend:
+          serviceName: gitlab
+          servicePort: 80

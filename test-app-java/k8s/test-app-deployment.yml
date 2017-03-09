@@ -1,0 +1,49 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    app: helloworld
+  name: test-app
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: helloworld
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: helloworld
+      name: helloworld
+    spec:
+      # imagePullSecrets:
+      # - name: registry-secret
+      containers:
+      - image: localhost:5000/java/test-app:master
+        imagePullPolicy: Always
+        name: helloworld
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        readinessProbe:
+          failureThreshold: 3
+          httpGet:
+            path: /
+            port: 8080
+            scheme: HTTP
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1

@@ -1,0 +1,17 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: docker-registry
+  namespace: kube-system
+spec:
+  tls:
+  - hosts:
+    - registry.local
+    secretName: local-wildcard
+  rules:
+  - host: registry.local
+    http:
+      paths:
+      - backend:
+          serviceName: kube-registry
+          servicePort: 5000

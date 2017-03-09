@@ -1,0 +1,13 @@
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: helloworld
+  namespace: default
+spec:
+  rules:
+  - host: helloworld.local
+    http:
+      paths:
+      - backend:
+          serviceName: helloworld
+          servicePort: 8080

@@ -1,0 +1,100 @@
+apiVersion: v1
+items:
+- apiVersion: extensions/v1beta1
+  kind: DaemonSet
+  metadata:
+    generation: 1
+    labels:
+      k8s-app: nginx-ingress-lb
+      test: test
+    name: nginx-ingress-daemon
+    namespace: ingress
+  spec:
+    selector:
+      matchLabels:
+        k8s-app: nginx-ingress-lb
+        name: nginx-ingress-lb
+    template:
+      metadata:
+        labels:
+          k8s-app: nginx-ingress-lb
+          name: nginx-ingress-lb
+          app: default-http-backend
+      spec:
+        containers:
+        - name: default-http-backend
+          # Any image is permissable as long as:
+          # 1. It serves a 404 page at /
+          # 2. It serves 200 on a /healthz endpoint
+          image: gcr.io/google_containers/defaultbackend:1.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 30
+            timeoutSeconds: 5
+          ports:
+          - containerPort: 8080
+          resources:
+            limits:
+              cpu: 10m
+              memory: 20Mi
+            requests:
+              cpu: 10m
+              memory: 20Mi
+        - args:
+          - /nginx-ingress-controller
+          - --default-backend-service=$(POD_NAMESPACE)/default-http-backend
+          - --nginx-configmap=$(POD_NAMESPACE)/nginx-load-balancer-conf
+          env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.name
+          - name: POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+          image: gcr.io/google_containers/nginx-ingress-controller:0.8.3
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          name: nginx-ingress-lb
+          ports:
+          - containerPort: 80
+            hostPort: 80
+            protocol: TCP
+          - containerPort: 443
+            hostPort: 443
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 10254
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+kind: List
+metadata: {}
+resourceVersion: ""
+selfLink: ""

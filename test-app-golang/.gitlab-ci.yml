@@ -1,0 +1,60 @@
+stages:
+  - build
+  - build_image
+  - deploy
+  - create_deploy
+
+go_compile:
+  stage: build
+  image: golang:stretch
+  script:
+    - make
+  artifacts:
+    paths:
+      - app
+  tags:
+    - kubernetes
+
+docker_build:
+  stage: build_image
+  image: v20100/docker:1.11.2
+  # before_script:
+  #   - docker login -u $REGISTRY_LOGIN -p $REGISTRY_PASSWORD registry.universite-lyon.fr
+  script:
+    - set
+    - docker info
+    - docker build -t $CONTAINER_TEST_IMAGE .
+    - docker tag $CONTAINER_TEST_IMAGE $CONTAINER_MASTER_IMAGE
+    - docker push $CONTAINER_MASTER_IMAGE
+  variables:
+    CONTAINER_REGISTRY: localhost:5000
+    CONTAINER_TEST_IMAGE: $CI_PROJECT_NAME:$CI_BUILD_REF
+    CONTAINER_MASTER_IMAGE: $CONTAINER_REGISTRY/golang/$CI_PROJECT_NAME:latest
+    # DOCKER_DAEMON_ARGS: "--insecure-registry $CONTAINER_REGISTRY"
+  dependencies:
+    - go_compile
+  tags:
+    - docker
+
+k8s_deploy:
+  stage: deploy
+  image: v20100/kubectl:v1.5.3
+  script:
+  - kubectl --namespace default patch deployment $CI_PROJECT_NAME -p "$KUBERNETES_PATCH"
+  variables:
+    KUBERNETES_PATCH: "{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_ID\"}}}}}"
+  dependencies:
+    - docker_build
+  tags:
+    - kubernetes
+
+k8s_install_deployment_on_failure:
+  stage: create_deploy
+  image: v20100/kubectl:v1.5.3
+  script:
+  - kubectl --namespace default create -f k8s -R
+  dependencies:
+    - k8s_deploy
+  tags:
+    - kubernetes
+  when: on_failure

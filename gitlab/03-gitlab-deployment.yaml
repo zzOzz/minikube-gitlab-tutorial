@@ -1,0 +1,52 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: gitlab
+  namespace: gitlab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        service: gitlab
+    spec:
+      containers:
+      - env:
+        - name: GITLAB_OMNIBUS_CONFIG
+          valueFrom:
+            secretKeyRef:
+              name: gitlab-secret
+              key: GITLAB_OMNIBUS_CONFIG
+        image: gitlab/gitlab-ce:latest
+        name: gitlab
+        ports:
+        - containerPort: 22
+        - containerPort: 80
+        resources: {}
+        # volumeMounts:
+        # - mountPath: /etc/gitlab
+        #   name: web-claim0
+        # - mountPath: /var/opt/gitlab/git-data/.ssh/
+        #   name: web-claim1
+        # - mountPath: /var/opt/gitlab/git-data/repositories/
+        #   name: web-claim2
+        # - mountPath: /var/opt/gitlab/backups
+        #   name: web-claim3
+      restartPolicy: Always
+      # volumes:
+      # - name: web-claim0
+      #   persistentVolumeClaim:
+      #     claimName: web-claim0
+      # - name: web-claim1
+      #   persistentVolumeClaim:
+      #     claimName: web-claim1
+      # - name: web-claim2
+      #   persistentVolumeClaim:
+      #     claimName: web-claim2
+      # - name: web-claim3
+      #   persistentVolumeClaim:
+      #     claimName: web-claim3
+status: {}

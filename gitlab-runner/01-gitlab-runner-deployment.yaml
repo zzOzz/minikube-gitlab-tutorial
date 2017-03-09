@@ -1,0 +1,92 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: gitlab-runner
+  namespace: gitlab
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        name: gitlab-runner
+    spec:
+      containers:
+      - name: gitlab-runner-kubernetes
+        image: gitlab/gitlab-runner:latest
+        resources: {}
+        volumeMounts:
+          - name: docker-socket
+            readOnly: false
+            mountPath: /var/run/docker.sock
+        securityContext:
+          privileged: true
+        env:
+        - name: CI_SERVER_URL
+          value: "http://gitlab/ci"
+        - name: RUNNER_NAME
+          value: "Gitlab Runner kubernetes"
+        - name: REGISTRATION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: gitlab-secret
+              key: REGISTRATION_TOKEN
+        - name: REGISTER_NON_INTERACTIVE
+          value: "true"
+        - name: RUNNER_EXECUTOR
+          value: "kubernetes"
+        - name: RUNNER_TAG_LIST
+          value: "kubernetes"
+        - name: KUBERNETES_NAMESPACE
+          value: "gitlab"
+        command: ["/bin/bash"]
+        args: ["-c", "gitlab-runner register kubernetes; /usr/bin/dumb-init /entrypoint run --user=gitlab-runner --working-directory=/home/gitlab-runner"]
+      - name: gitlab-runner-docker
+        image: gitlab/gitlab-runner:latest
+        resources: {}
+        volumeMounts:
+          - name: docker-socket
+            readOnly: false
+            mountPath: /var/run/docker.sock
+        securityContext:
+          privileged: true
+        env:
+        - name: CI_SERVER_URL
+          value: "http://gitlab/ci"
+        - name: RUNNER_NAME
+          value: "Gitlab Runner docker"
+        - name: REGISTRATION_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: gitlab-secret
+              key: REGISTRATION_TOKEN
+        - name: REGISTER_NON_INTERACTIVE
+          value: "true"
+        - name: RUNNER_EXECUTOR
+          value: "docker"
+        - name: RUNNER_TAG_LIST
+          value: "docker"
+        - name: DOCKER_VOLUMES
+          value: "/var/run/docker.sock:/var/run/docker.sock"
+        - name: DOCKER_IMAGE
+          value: "docker:latest"
+        - name: DOCKER_PRIVILEGED
+          value: "true"
+        - name: DOCKER_DISABLE_CACHE
+          value: "false"
+        - name: DOCKER_CACHE_DIR
+          value: "/cache"
+        - name: DOCKER_DNS_SEARCH
+          value: "gitlab.svc.cluster.local"
+        - name: DOCKER_DNS
+          value: "10.0.0.10"
+        command: ["/bin/bash"]
+        args: ["-c", "gitlab-runner register docker; /usr/bin/dumb-init /entrypoint run --user=gitlab-runner --working-directory=/home/gitlab-runner"]
+      restartPolicy: Always
+      volumes:
+        - name: docker-socket
+          hostPath:
+            path: /var/run/docker.sock
+status: {}

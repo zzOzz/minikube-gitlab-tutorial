@@ -1,0 +1,63 @@
+stages:
+  - build
+  - build_image
+  - deploy
+
+maven_compile:
+  stage: build
+  image: v20100/maven:3.3.9
+  before_script:
+    - mvn --version
+  script:
+    - mvn -B clean compile assembly:single
+  artifacts:
+    paths:
+      - target/*.jar
+  tags:
+    - kubernetes
+
+docker_build:
+  stage: build_image
+  image: v20100/docker:1.11.2
+  # before_script:
+  #   - docker login -u $REGISTRY_LOGIN -p $REGISTRY_PASSWORD registry.universite-lyon.fr
+  script:
+    - set
+    - docker info
+    - docker build -t $CONTAINER_TEST_IMAGE .
+    - docker tag $CONTAINER_TEST_IMAGE $CONTAINER_MASTER_IMAGE
+    - docker push $CONTAINER_MASTER_IMAGE
+  variables:
+    CONTAINER_REGISTRY: localhost:5000
+    CONTAINER_TEST_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:$CI_BUILD_REF
+    CONTAINER_MASTER_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:master
+    # DOCKER_DAEMON_ARGS: "--insecure-registry $CONTAINER_REGISTRY"
+  dependencies:
+    - maven_compile
+  tags:
+    - docker
+
+k8s_deploy:
+  stage: deploy
+  image: v20100/kubectl:v1.5.3
+  script:
+  - kubectl version
+  - kubectl --namespace default patch deployment $CI_PROJECT_NAME -p "$KUBERNETES_PATCH"
+  # - --insecure-skip-tls-verify --namespace default patch deployment $CI_PROJECT_NAME -p "$KUBERNETES_PATCH"
+  # - "/usr/local/bin/kubectl --insecure-skip-tls-verify replace -f k8s/helloWorld-dep.yml"
+  variables:
+    CONTAINER_REGISTRY: localhost:5000
+    CONTAINER_TEST_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:$CI_BUILD_REF
+    CONTAINER_MASTER_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:master
+    KUBERNETES_PATCH: "{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_REF\"}}}}}"
+  dependencies:
+    - docker_build
+  tags:
+    - kubernetes
+#k8s_deploy:
+#  stage: deploy
+#  image: registry.universite-lyon.fr/kubectl/preprod
+#  script:
+#  - "patch deployment helloworld-deployment -p '{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_REF\"}}}}}'"
+#  variables:
+#    DOCKER_AUTH_CONFIG: $DOCKER_AUTH_CONFIG
