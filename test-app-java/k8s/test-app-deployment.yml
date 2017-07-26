@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   labels:
     app: helloworld
-  name: test-app
+  name: test-app-java
   namespace: default
 spec:
   replicas: 2
@@ -23,7 +23,7 @@ spec:
       # imagePullSecrets:
       # - name: registry-secret
       containers:
-      - image: localhost:5000/java/test-app:master
+      - image: localhost:5000/java/test-app-java:master
         imagePullPolicy: Always
         name: helloworld
         ports:

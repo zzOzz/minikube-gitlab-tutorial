@@ -1,6 +1,15 @@
 ## K8s Gitlab Deployment
 
-
+Use makefile
+~~~
+make 01-start-minikube
+make 02-ingress
+make 03-docker-registry
+make 04-gitlab
+make 05-gitlab-runner
+make 06-push-app-golang ## or 06-push-app-java
+make 07-test-tag
+~~~
 ### Install minikube
 https://github.com/kubernetes/minikube/releases
 ~~~

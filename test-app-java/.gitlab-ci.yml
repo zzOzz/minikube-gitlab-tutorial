@@ -2,6 +2,7 @@ stages:
   - build
   - build_image
   - deploy
+  - create_deploy
 
 maven_compile:
   stage: build
@@ -29,7 +30,7 @@ docker_build:
     - docker push $CONTAINER_MASTER_IMAGE
   variables:
     CONTAINER_REGISTRY: localhost:5000
-    CONTAINER_TEST_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:$CI_BUILD_REF
+    CONTAINER_TEST_IMAGE: $CI_PROJECT_NAME:$CI_BUILD_REF
     CONTAINER_MASTER_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:master
     # DOCKER_DAEMON_ARGS: "--insecure-registry $CONTAINER_REGISTRY"
   dependencies:
@@ -41,23 +42,21 @@ k8s_deploy:
   stage: deploy
   image: v20100/kubectl:v1.5.3
   script:
-  - kubectl version
   - kubectl --namespace default patch deployment $CI_PROJECT_NAME -p "$KUBERNETES_PATCH"
-  # - --insecure-skip-tls-verify --namespace default patch deployment $CI_PROJECT_NAME -p "$KUBERNETES_PATCH"
-  # - "/usr/local/bin/kubectl --insecure-skip-tls-verify replace -f k8s/helloWorld-dep.yml"
   variables:
-    CONTAINER_REGISTRY: localhost:5000
-    CONTAINER_TEST_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:$CI_BUILD_REF
-    CONTAINER_MASTER_IMAGE: $CONTAINER_REGISTRY/java/$CI_PROJECT_NAME:master
-    KUBERNETES_PATCH: "{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_REF\"}}}}}"
+    KUBERNETES_PATCH: "{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_ID\"}}}}}"
   dependencies:
     - docker_build
   tags:
     - kubernetes
-#k8s_deploy:
-#  stage: deploy
-#  image: registry.universite-lyon.fr/kubectl/preprod
-#  script:
-#  - "patch deployment helloworld-deployment -p '{\"spec\": {\"template\":{\"metadata\":{\"labels\":{\"version\":\"$CI_BUILD_REF\"}}}}}'"
-#  variables:
-#    DOCKER_AUTH_CONFIG: $DOCKER_AUTH_CONFIG
+
+k8s_install_deployment_on_failure:
+  stage: create_deploy
+  image: v20100/kubectl:v1.5.3
+  script:
+  - kubectl --namespace default create -f k8s -R
+  dependencies:
+    - k8s_deploy
+  tags:
+    - kubernetes
+  when: on_failure

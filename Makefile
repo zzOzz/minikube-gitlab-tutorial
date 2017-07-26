@@ -29,7 +29,7 @@ all: gobuild
 	open http://gitlab/admin/runners
 	kubectl get pod --all-namespaces -w
 
-06-push-app:
+06-push-app-golang:
 	cd test-app-golang && rm -fr .git
 	cd test-app-golang && git init
 	sleep 3
@@ -44,6 +44,20 @@ all: gobuild
 	sleep 10
 	open http://gitlab/root/test-app-golang/pipelines
 
+06-push-app-java:
+	cd test-app-java && rm -fr .git
+	cd test-app-java && git init
+	sleep 3
+	curl --header "PRIVATE-TOKEN: $(GITLAB_PRIVATE_TOKEN)" -X POST "http://gitlab/api/v3/projects?name=test-app-java"
+	sleep 3
+	cd test-app-java && git remote add origin http://gitlab/root/test-app-java.git
+	cd test-app-java && git add .
+	cd test-app-java && git commit -a -m "Initial Commit "`cat VERSION`
+	cd test-app-java && git tag `cat VERSION`
+	cd test-app-java && git push -u origin `cat VERSION`
+	sleep 10
+	open http://gitlab/root/test-app-java/pipelines
+
 07-test-tag:
 	cd test-app-golang && echo "1.0.2" > VERSION
 	cd test-app-golang && git commit -a -m "test version "`cat VERSION`
@@ -52,5 +66,9 @@ all: gobuild
 	sleep 10
 	open http://gitlab/root/test-app-golang/pipelines
 
-clean:
+clean-golang:
 	curl --header "PRIVATE-TOKEN: $(GITLAB_PRIVATE_TOKEN)" -X DELETE "http://gitlab/api/v3/projects/root%2Ftest-app-golang"
+	rm -fr test-app-golang/.git
+clean-java:
+	curl --header "PRIVATE-TOKEN: $(GITLAB_PRIVATE_TOKEN)" -X DELETE "http://gitlab/api/v3/projects/root%2Ftest-app-java"
+	rm -fr test-app-java/.git
