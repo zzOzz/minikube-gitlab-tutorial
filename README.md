@@ -29,7 +29,7 @@ Add these entries in your hostfile
 
 ~~~
 echo $(minikube ip)" gitlab"
-echo $(minikube ip)" helloworld"
+echo $(minikube ip)" helloworld.local"
 ~~~
 
 ### Create ingress controller
